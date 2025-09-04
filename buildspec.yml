@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - npm ci || npm i
+  build:
+    commands:
+      - npm run build
+  post_build:
+    commands:
+      # 從 SSM 讀前端堆疊輸出的 bucket 與 distribution
+      - export BUCKET=$(aws ssm get-parameter --name /cafe/frontend/bucket --query Parameter.Value --output text)
+      - export DIST_ID=$(aws ssm get-parameter --name /cafe/frontend/distribution --query Parameter.Value --output text)
+      # 發佈到 S3 並清 CloudFront 快取
+      - aws s3 sync dist/ s3://$BUCKET/ --delete
+      - aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: dist

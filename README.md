@@ -1,69 +1,106 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+---
 
-Currently, two official plugins are available:
+# `cathay-frontend/README.md`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```markdown
+# cathay-frontend — React + Vite on S3/CloudFront (CI/CD)
 
-## Expanding the ESLint configuration
+以 **React + TypeScript + Vite** 開發的前端，透過 **AWS CodePipeline + CodeBuild** 自動建置並發佈到 **S3**，由 **CloudFront** 對外服務。  
+基礎設施（S3/CloudFront/SSM 參數）由 IaC repo 負責佈署：
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- IaC（CloudFormation）：https://github.com/fanfan0412/CFTemplatesRepo
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+> 預設部署區域：**ap-northeast-1 (Tokyo)**
 ```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Live（上線網址）
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- CloudFront Domain：`https://<你的 CloudFront 網域>`  
+  （到 `the-cafe-frontend` 堆疊 **Outputs** 或用 CLI 查詢）
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+aws cloudformation describe-stacks --stack-name the-cafe-frontend \
+  --query "Stacks[0].Outputs"
+```
+---
+
+## 技術棧
+
+* React 18 + TypeScript + Vite
+
+* AWS S3（靜態網站）
+
+* AWS CloudFront（CDN）
+
+* AWS CodePipeline + CodeBuild（CI/CD）
+
+* AWS Systems Manager Parameter Store（提供部署參數）
+---
+
+## 本地開發
+```bash
+# 建議 Node.js 20+
+npm ci
+npm run dev
+# http://localhost:5173
+```
+## 建置與本地預覽
+```
+npm run build
+npm run preview
+```
+---
+# CI/CD（CodePipeline + CodeBuild）
+## Pipeline 行為
+* Source：GitHub（本 repo）`main`
+* Build：CodeBuild（Source from CodePipeline）
+* 流程：
+  1. `npm ci && npm run build`
+  2. 從 SSM 讀取網站桶 / Distribution ID
+  3. `aws s3 sync dist/ s3://<bucket>/ --delete`
+  4. `cloudfront create-invalidation`（預設 `/*`，可按需改為 `/index.html`）
+---
+# 環境參數
+## SSM（由 IaC 建立）
+* `/cafe/frontend/bucket`：S3 目標桶名，例如 `cafe-frontend-<account>-ap-northeast-1`
+* `/cafe/frontend/distribution`：CloudFront Distribution ID
+
+## （可選）第三方 API 範例
+`.env`
+```
+VITE_API_BASE_URL=https://api.open-meteo.com/v1
+```
+`src/api/client.ts`
+```
+const base = import.meta.env.VITE_API_BASE_URL ?? "https://api.open-meteo.com/v1";
+
+export async function fetchWeather(lat: number, lon: number) {
+  const url = `${base}/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
+```
+---
+## 專案結構
+```arduino
+cathay-frontend/
+├─ public/
+├─ src/
+├─ buildspec.yml
+├─ package.json
+└─ vite.config.ts
+```
+---
+## 架構圖
+```mermaid
+graph LR
+  Dev[Developer] -->|git push| GH[GitHub cathay-frontend]
+  GH --> CP[CodePipeline]
+  CP --> CB[CodeBuild]
+  CB --> S3[S3 Site Bucket]
+  S3 --> CF[CloudFront CDN]
+  User[End User] --> CF
 ```

@@ -16,14 +16,7 @@
 ---
 
 ## Live（上線網址）
-
-- CloudFront Domain：`https://<你的 CloudFront 網域>`  
-  （到 `the-cafe-frontend` 堆疊 **Outputs** 或用 CLI 查詢）
-
-```bash
-aws cloudformation describe-stacks --stack-name the-cafe-frontend \
-  --query "Stacks[0].Outputs"
-```
+- https://diqh11tmow6os.cloudfront.net/
 ---
 
 ## 技術棧
@@ -104,3 +97,23 @@ graph LR
   S3 --> CF[CloudFront CDN]
   User[End User] --> CF
 ```
+---
+## 疑難排解
+* CloudFront 失效 AccessDenied
+  給 CodeBuild 服務角色 cloudfront:CreateInvalidation，限制到你的 Distribution ARN。
+
+* S3 AccessDenied（List/Put/Delete）
+  CodeBuild 角色需對網站桶具備：s3:ListBucket, s3:GetBucketLocation, s3:PutObject, s3:DeleteObject。
+
+* SSM AccessDenied
+  CodeBuild 角色需 ssm:GetParameter(s) 讀 /cafe/frontend/bucket、/cafe/frontend/distribution。
+
+* Node 版本警告
+  buildspec.yml 已指定 runtime-versions.nodejs: 20；若仍警告，請確認 CodeBuild image 支援。
+
+* 找不到 CloudFront 網域
+  於 the-cafe-frontend 堆疊 Outputs 查 CloudFrontDomain。
+---
+
+## 相關連結
+* IaC（CloudFormation）：https://github.com/fanfan0412/CFTemplatesRepo

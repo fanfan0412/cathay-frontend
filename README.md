@@ -1,10 +1,10 @@
 
 ---
 
-# `for-IaS-frontend/README.md`
+# `for-IaC-frontend/README.md`
 
 ```markdown
-# for-IaS-frontend — React + Vite on S3/CloudFront (CI/CD)
+# for-IaC-frontend — React + Vite on S3/CloudFront (CI/CD)
 
 以 **React + TypeScript + Vite** 開發的前端，透過 **AWS CodePipeline + CodeBuild** 自動建置並發佈到 **S3**，由 **CloudFront** 對外服務。  
 基礎設施（S3/CloudFront/SSM 參數）由 IaC repo 負責佈署：
@@ -79,7 +79,7 @@ export async function fetchWeather(lat: number, lon: number) {
 ---
 ## 專案結構
 ```arduino
-cathay-frontend/
+for-IaC-frontend/
 ├─ public/
 ├─ src/
 ├─ buildspec.yml
@@ -90,7 +90,7 @@ cathay-frontend/
 ## 架構圖
 ```mermaid
 graph LR
-  Dev[Developer] -->|git push| GH[GitHub cathay-frontend]
+  Dev[Developer] -->|git push| GH[GitHub for-IaC-frontend]
   GH --> CP[CodePipeline]
   CP --> CB[CodeBuild]
   CB --> S3[S3 Site Bucket]
